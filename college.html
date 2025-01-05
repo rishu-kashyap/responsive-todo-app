@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Task Manager</title>
+  <style>
+    /* General Styles */
+    body {
+      font-family: 'Verdana', sans-serif;
+      margin: 0;
+      padding: 0;
+      background: #eceff1;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+    }
+
+    .app-container {
+      width: 95%;
+      max-width: 500px;
+      background: #ffffff;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    h1 {
+      text-align: center;
+      color: #2c3e50;
+      font-size: 24px;
+      margin-bottom: 20px;
+    }
+
+    .task-form {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .task-form input {
+      flex: 1;
+      padding: 10px;
+      font-size: 16px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+    }
+
+    .task-form button {
+      padding: 10px 15px;
+      font-size: 16px;
+      background-color: #5cb85c;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    .filters {
+      margin-bottom: 20px;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .filters button {
+      padding: 8px 15px;
+      font-size: 14px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      background: #3498db;
+      color: white;
+    }
+
+    .task-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    .task-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 15px;
+      margin-bottom: 10px;
+      background: #f5f5f5;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+    }
+
+    .task-item span {
+      flex: 1;
+    }
+
+    .task-item.completed span {
+      text-decoration: line-through;
+      color: #888;
+    }
+
+    .action-buttons button {
+      padding: 5px 10px;
+      font-size: 14px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    .action-buttons .mark-complete {
+      background: #3498db;
+      color: white;
+    }
+
+    .action-buttons .delete-task {
+      background: #e74c3c;
+      color: white;
+      margin-left: 5px;
+    }
+  </style>
+</head>
+<body>
+  <div class="app-container">
+    <h1>Task Manager</h1>
+    <div class="task-form">
+      <input type="text" id="taskInput" placeholder="Add a new task...">
+      <button id="addTaskBtn">Add</button>
+    </div>
+    <div class="filters">
+      <button data-filter="all">All</button>
+      <button data-filter="completed">Completed</button>
+      <button data-filter="pending">Pending</button>
+    </div>
+    <ul class="task-list" id="taskList"></ul>
+  </div>
+
+  <script>
+    // Selectors
+    const taskInput = document.getElementById('taskInput');
+    const addTaskBtn = document.getElementById('addTaskBtn');
+    const taskList = document.getElementById('taskList');
+    const filterButtons = document.querySelectorAll('.filters button');
+
+    // Load tasks from localStorage
+    const savedTasks = JSON.parse(localStorage.getItem('tasks')) || [];
+    savedTasks.forEach(task => addTaskToDOM(task.text, task.completed));
+
+    // Add Task
+    addTaskBtn.addEventListener('click', () => {
+      const taskText = taskInput.value.trim();
+      if (taskText) {
+        const task = { text: taskText, completed: false };
+        addTaskToDOM(taskText, false);
+        saveTaskToLocalStorage(task);
+        taskInput.value = '';
+      }
+    });
+
+    // Add Task to DOM
+    function addTaskToDOM(taskText, isCompleted) {
+      const li = document.createElement('li');
+      li.className = `task-item ${isCompleted ? 'completed' : ''}`;
+
+      li.innerHTML = `
+        <span>${taskText}</span>
+        <div class="action-buttons">
+          <button class="mark-complete" onclick="toggleComplete(this)">Complete</button>
+          <button class="delete-task" onclick="deleteTask(this)">Delete</button>
+        </div>
+      `;
+
+      taskList.appendChild(li);
+    }
+
+    // Save Task to Local Storage
+    function saveTaskToLocalStorage(task) {
+      savedTasks.push(task);
+      localStorage.setItem('tasks', JSON.stringify(savedTasks));
+    }
+
+    // Update Task in Local Storage
+    function updateTaskInLocalStorage(taskText, isCompleted) {
+      const task = savedTasks.find(task => task.text === taskText);
+      if (task) task.completed = isCompleted;
+      localStorage.setItem('tasks', JSON.stringify(savedTasks));
+    }
+
+    // Remove Task from Local Storage
+    function removeTaskFromLocalStorage(taskText) {
+      const taskIndex = savedTasks.findIndex(task => task.text === taskText);
+      if (taskIndex > -1) savedTasks.splice(taskIndex, 1);
+      localStorage.setItem('tasks', JSON.stringify(savedTasks));
+    }
+
+    // Toggle Complete
+    function toggleComplete(button) {
+      const taskItem = button.closest('.task-item');
+      const taskText = taskItem.querySelector('span').textContent;
+      const isCompleted = taskItem.classList.toggle('completed');
+      button.textContent = isCompleted ? 'Undo' : 'Complete';
+      updateTaskInLocalStorage(taskText, isCompleted);
+    }
+
+    // Delete Task
+    function deleteTask(button) {
+      const taskItem = button.closest('.task-item');
+      const taskText = taskItem.querySelector('span').textContent;
+      taskList.removeChild(taskItem);
+      removeTaskFromLocalStorage(taskText);
+    }
+
+    // Filter Tasks
+    filterButtons.forEach(button => {
+      button.addEventListener('click', () => {
+        const filter = button.dataset.filter;
+        const tasks = document.querySelectorAll('.task-item');
+
+        tasks.forEach(task => {
+          switch (filter) {
+            case 'all':
+              task.style.display = 'flex';
+              break;
+            case 'completed':
+              task.style.display = task.classList.contains('completed') ? 'flex' : 'none';
+              break;
+            case 'pending':
+              task.style.display = !task.classList.contains('completed') ? 'flex' : 'none';
+              break;
+          }
+        });
+      });
+    });
+  </script>
+</body>
+</html>
